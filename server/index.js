@@ -1,7 +1,7 @@
 const express = require("express")
 const mongoose = require("mongoose")
 const cors = require("cors")
-const UsersModel = require('./models/Users')
+const UsersModel = require('./models/users')
 
 const app = express()
 app.use(express.json())
@@ -27,8 +27,8 @@ app.post('/login', (req,res) =>{
 
 app.post('/register', (req,res) => {
     UsersModel.create(req.body)
-    .then(users => res.json(users))
-    .catch(err => res.json(err))
+    .then(user => res.json("Success"))
+    .catch(err => res.status(500).json(err))
 })
 
 app.listen(3001, () => {
