@@ -6,11 +6,12 @@ import './styles.css';
 function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
     const navigate = useNavigate();
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        axios.post('http://localhost:3001/login', { username, password })
+        axios.post('http://localhost:3001/login', { email, password })
             .then(result => {
                 if (result.data === "Success") {
                     navigate('/home');
@@ -31,10 +32,10 @@ function Login() {
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
-                        placeholder="Username"
+                        placeholder="Email"
                         className="input-field"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                     />
                     <input
                         type="password"
