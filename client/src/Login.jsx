@@ -4,43 +4,49 @@ import axios from 'axios';
 import './styles.css';
 
 function Login() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        axios.post('http://localhost:3001/login', { email, password })
+        axios.post('http://localhost:3001/login', { username, password })
             .then(result => {
                 if (result.data === "Success") {
                     navigate('/home');
+                } else {
+                    alert('Login failed!');
                 }
             })
-            .catch(err => console.log(err));
+            .catch(err => {
+                alert('Error logging in');
+                console.log(err);
+            });
     };
 
     return (
-        <div className="container">
+        <div className="login-container">
             <div className="form-container">
-                <h2 className="title">Welcome to DreamForge</h2>
+                <h2 className="title">Login to DreamForge</h2>
                 <form onSubmit={handleSubmit}>
                     <input
-                        type="email"
-                        placeholder="Enter Email"
+                        type="text"
+                        placeholder="Username"
                         className="input-field"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                     />
                     <input
                         type="password"
-                        placeholder="Enter Password"
+                        placeholder="Password"
                         className="input-field"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
-                    <button className="button">Login</button>
+                    <button type="submit" className="button">Login</button>
                 </form>
-                <p className="link"><Link to="/register">Create a new account.</Link></p>
+                <Link to="/forgot-password" className="forgot-link">Forgot Username or Password?</Link>
+                <Link to="/register" className="link">Create a new account.</Link>
             </div>
         </div>
     );

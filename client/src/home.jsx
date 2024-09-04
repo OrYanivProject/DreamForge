@@ -5,14 +5,13 @@ function Home() {
     const [idea, setIdea] = useState('');
 
     const handleSubmission = () => {
-        // Logic to handle submission, possibly sending data to backend
-        console.log(idea); // Just a placeholder action
+        console.log(idea); // Logic for submission
     };
 
     return (
-        <div className="container">
+        <div className="container home-container">
             <div className="form-container">
-                <h2 className="title">Write your idea, and in one click,<br/>your project book is ready.</h2>
+                <h2 className="title">Write your idea, and in one click, your project book is ready.</h2>
                 <input
                     type="text"
                     placeholder="Let's build the future..."
