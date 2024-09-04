@@ -1,0 +1,50 @@
+/* styles.css - Adjustments for the home page */
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f4; /* Light gray background */
+  }
+  
+  .form-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    width: 40%; /* Adjust width to increase the size of the form */
+    max-width: 600px; /* Ensures the form doesn't get too wide on larger screens */
+  }
+  
+  .input-field {
+    width: 100%; /* Full width within the form container */
+    padding: 12px; /* Increased padding for better visibility */
+    margin: 20px 0; /* Increased margin for better separation */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px; /* Larger font size for better readability */
+  }
+  
+  .button {
+    width: 100%;
+    padding: 10px;
+    background-color: #0056b3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .button:hover {
+    background-color: #004080;
+  }
+  
+  .title {
+    margin-bottom: 20px;
+    text-align: center; /* Ensures text is centered */
+    line-height: 1.4; /* Adjust line height to ensure text spans two lines */
+    font-size: 22px; /* Adjust font size as needed */
+  }
+  
