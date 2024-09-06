@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Header from './Header';
 import './styles.css';
 
 function Home() {
@@ -9,6 +10,8 @@ function Home() {
     };
 
     return (
+        <div>
+            <Header />
         <div className="container home-container">
             <div className="form-container">
                 <h2 className="title">Write your idea, and in one click, your project book is ready.</h2>
@@ -21,6 +24,7 @@ function Home() {
                 />
                 <button className="button" onClick={handleSubmission}>Make it Real</button>
             </div>
+        </div>
         </div>
     );
 }

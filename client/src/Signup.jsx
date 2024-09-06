@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
+import Header from './Header';
 
 function Signup() {
     const [name, setName] = useState('');
@@ -24,6 +25,9 @@ function Signup() {
     };
 
     return (
+        <div>
+        <div>
+            <Header />
         <div className="container">
             <div className="form-container">
                 <h2 className="title">Create Account</h2>
@@ -53,6 +57,8 @@ function Signup() {
                 </form>
                 <p className="link"><Link to="/login">Already have an account? Log in here.</Link></p>
             </div>
+        </div>
+        </div>
         </div>
     );
 }

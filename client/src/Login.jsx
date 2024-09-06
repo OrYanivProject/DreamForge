@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
+import Header from './Header';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -26,6 +27,8 @@ function Login() {
     };
 
     return (
+        <div>
+        <Header />
         <div className="login-container">
             <div className="form-container">
                 <h2 className="title">Login to DreamForge</h2>
@@ -49,6 +52,7 @@ function Login() {
                 <Link to="/forgot-password" className="forgot-link">Forgot Username or Password?</Link>
                 <Link to="/register" className="link">Create a new account.</Link>
             </div>
+        </div>
         </div>
     );
 }
