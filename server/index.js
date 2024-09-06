@@ -1,7 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const jwt = require('jsonwebtoken'); // Import jwt for token-based authentication
+const jwt = require('jsonwebtoken');
 const UsersModel = require('./models/users');
 
 const app = express();
@@ -11,7 +11,6 @@ app.use(cors());
 mongoose.connect("mongodb+srv://oryanivdb:OyYl9792@dreamforge.6leyx.mongodb.net/users");
 
 const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure secret
-mongoose.connect("mongodb+srv://oryanivdb:OyYl9792@dreamforge.6leyx.mongodb.net/users")
 
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
@@ -19,6 +18,7 @@ app.post('/login', (req, res) => {
         .then(user => {
             if (user) {
                 if (user.password === password) {
+                    // Generate a token
                     const token = jwt.sign({ email: user.email, id: user._id }, JWT_SECRET, { expiresIn: '1h' });
                     res.json({ message: "Success", token });
                 } else {
@@ -32,18 +32,12 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/register', (req, res) => {
-    // Search for a user that matches either the email or the name.
     UsersModel.findOne({ $or: [{ email: req.body.email }, { name: req.body.name }] })
         .then(existingUser => {
             if (existingUser) {
-                if (existingUser.email === req.body.email && existingUser.name === req.body.name) {
-                    // Both username and email already exist
-                    return res.status(409).json({ message: "Both username and email already exist" });
-                } else if (existingUser.email === req.body.email) {
-                    // Only email exists
+                if (existingUser.email === req.body.email) {
                     return res.status(409).json({ message: "Email already exists" });
                 } else {
-                    // Only username exists
                     return res.status(409).json({ message: "Username already exists" });
                 }
             }
@@ -54,13 +48,10 @@ app.post('/register', (req, res) => {
         .catch(err => res.status(500).json({ message: err.message }));
 });
 
-
-
 app.post('/logout', (req, res) => {
-    // You can handle session removal or token invalidation logic here
     res.json({ message: "Logged out successfully" });
 });
 
 app.listen(3001, () => {
-    console.log("server is running");
+    console.log("server is running on port 3001");
 });

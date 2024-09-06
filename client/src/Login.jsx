@@ -5,19 +5,21 @@ import './styles.css';
 import Header from './Header';
 
 function Login() {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const navigate = useNavigate();
 
     const handleSubmit = (e) => {
         e.preventDefault();
         axios.post('http://localhost:3001/login', { email, password })
             .then(result => {
-                if (result.data === "Success") {
+                if (result.data.message === "Success") {
+                    // Store the token in localStorage
+                    localStorage.setItem('token', result.data.token);
+                    // Redirect the user after successful login
                     navigate('/home');
                 } else {
-                    alert('Login failed!');
+                    alert(result.data); // Show the error message (like "Incorrect password")
                 }
             })
             .catch(err => {
