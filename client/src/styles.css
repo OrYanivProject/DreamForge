@@ -155,3 +155,35 @@
 .general-error {
   font-weight: bold;
 }
+
+.bookshelf {
+  padding: 20px;
+  max-width: 800px;
+  margin: auto;
+}
+
+.book {
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.book-title {
+  font-weight: bold;
+}
+
+.actions button {
+  margin: 0 5px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  opacity: 0.8;
+}

@@ -19,7 +19,7 @@ function Login() {
                     // Redirect the user after successful login
                     navigate('/home');
                 } else {
-                    alert(result.data); // Show the error message (like "Incorrect password")
+                    alert(result.data.message); // Show the error message (like "Incorrect password")
                 }
             })
             .catch(err => {

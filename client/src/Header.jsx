@@ -34,7 +34,7 @@ function Header() {
             <div className='nav-li'>
                 {isLoggedIn ? (
                     <>
-                        <Link to="/my-projects" className="nav-link">My Projects</Link>
+                        <Link to="/bookshelf" className="nav-link">My Projects</Link>
                         <button className="nav-link button" onClick={handleLogout}>Log Out</button>
                     </>
                 ) : (
