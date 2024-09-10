@@ -16,6 +16,7 @@ function Login() {
                 if (result.data.message === "Success") {
                     // Store the token in localStorage
                     localStorage.setItem('token', result.data.token);
+                    localStorage.setItem('userId', result.data.userId);
                     // Redirect the user after successful login
                     navigate('/home');
                 } else {

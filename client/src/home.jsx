@@ -7,6 +7,7 @@ function Home() {
 
     const handleSubmission = () => {
         console.log(idea); // Logic for submission
+        
     };
 
     return (

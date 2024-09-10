@@ -20,39 +20,37 @@ const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure secret
 const verifyToken = (req, res, next) => {
     const bearerHeader = req.headers['authorization'];
     if (typeof bearerHeader !== 'undefined') {
-        const bearerToken = bearerHeader.split(' ')[1];  // Extract the token from Bearer <token>
+        const bearerToken = bearerHeader.split(' ')[1];
         jwt.verify(bearerToken, JWT_SECRET, (err, decoded) => {
             if (err) {
-                return res.status(403).json({ message: "Invalid token" }); // Token is not valid
-            } else {
-                req.user = decoded;  // Add decoded user information to request object
-                next();
+                return res.status(403).json({ message: 'Unauthorized access' });
             }
+            req.user = decoded;
+            next();
         });
     } else {
-        res.status(401).json({ message: "Auth token is not supplied" }); // No token provided
+        return res.status(401).json({ message: 'Authorization header not found' });
     }
 };
 
 
+//####  User login/out and registretion ####
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     UsersModel.findOne({ email: email })
         .then(user => {
-            if (user) {
-                if (user.password === password) {
-                    // Generate a token
-                    const token = jwt.sign({ email: user.email, id: user._id.toString() }, JWT_SECRET, { expiresIn: '1h' });
-                    res.json({ message: "Success", token });
-                } else {
-                    res.json("The password is incorrect");
-                }
+            if (user && user.password === password) {  // Assume passwords are correctly managed
+                const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: '1h' });
+                res.json({ message: "Success", token, userId: user._id.toString() }); // Ensure userId is sent
             } else {
-                res.json("No such username exists");
+                res.status(401).json({ message: "No such username exists or password is incorrect" });
             }
         })
         .catch(err => res.status(500).json({ message: err.message }));
 });
+
+
+
 
 app.post('/register', (req, res) => {
     UsersModel.findOne({ $or: [{ email: req.body.email }, { name: req.body.name }] })
@@ -122,33 +120,122 @@ app.get('/users/:userId/books', verifyToken, async (req, res) => {
 // API to delete a book from a user's bookshelf
 app.delete('/users/:userId/books/:bookId', async (req, res) => {
     try {
-        await Book.findByIdAndRemove(req.params.bookId);
+        // Directly delete the book and check if deletion was successful
+        const deletedBook = await Book.findOneAndDelete({ _id: req.params.bookId });
+        if (!deletedBook) {
+            return res.status(404).json({ message: "Book not found" });
+        }
+
+        // Update the user's document to pull the book from their books array
         await UsersModel.findByIdAndUpdate(req.params.userId, { $pull: { books: req.params.bookId } });
-        res.status(204).send();
+
+        res.status(204).send();  // Send a success status without content
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error removing book:', error);
+        res.status(500).json({ message: 'Internal Server Error: ' + error.message });
     }
 });
 
-app.post('/upload', upload.single('file'), async (req, res) => {
+
+
+
+
+// const express = require('express');
+// const Book = require('./models/Book'); 
+// const UsersModel = require('./models/users'); 
+
+app.post('/users/:userId/books', async (req, res) => {
+    const { userId } = req.params; // Assuming you're receiving the user's ID in the URL
+    const { title, description, pdfUrl } = req.body; // Details about the book
+
     try {
-      const { path: tempPath, originalname } = req.file;
-      const fileContents = require('fs').readFileSync(tempPath);
-  
-      const response = await dbx.filesUpload({
-        path: '/' + originalname,
-        contents: fileContents
-      });
-  
-      // Optionally, remove the file after upload
-      require('fs').unlinkSync(tempPath);
-  
-      res.send('File uploaded successfully!');
+        const newBook = new Book({
+            title,
+            description,
+            pdfUrl,
+            user: userId  // Link the book to the user who uploaded it
+        });
+
+        await newBook.save(); // Save the new book
+
+        // Link the new book to the user's list of books
+        await UsersModel.findByIdAndUpdate(userId, {
+            $push: { books: newBook._id }
+        });
+
+        res.status(201).json({ message: 'Book added successfully', book: newBook });
     } catch (error) {
-      console.error('Error uploading file: ', error);
-      res.status(500).send('Failed to upload file.');
+        console.error('Error adding book:', error);
+        res.status(500).json({ message: error.toString() });
     }
-  });
+});
+
+//check
+// index.js
+const setupDropboxClient = require('./dropboxClient');
+
+app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
+    const dbx = await setupDropboxClient();  // Ensure dbx is initialized here
+
+    try {
+        const { file } = req;
+        if (!file) {
+            return res.status(400).json({ message: "No file uploaded." });
+        }
+
+        const fileContents = require('fs').readFileSync(file.path);
+        const response = await dbx.filesUpload({
+            path: '/' + file.originalname,
+            contents: fileContents,
+            mode: 'add',
+            autorename: true,
+            mute: false
+        });
+
+        require('fs').unlinkSync(file.path);  // Clean up the uploaded file
+
+        // Convert to a direct download URL or handle the response accordingly
+        res.status(201).json({ message: 'File uploaded successfully', data: response });
+    } catch (error) {
+        console.error('Failed to upload file:', error);
+        res.status(500).json({ message: 'Failed to upload file' });
+    }
+});
+
+
+//end check
+
+// POST endpoint to upload a file and create a book entry
+app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
+    const { file } = req;
+    if (!file) {
+        return res.status(400).send('No file uploaded.');
+    }
+
+    try {
+        const fileContents = require('fs').readFileSync(file.path);
+        const response = await dbx.filesUpload({
+            path: '/' + file.originalname,
+            contents: fileContents,
+            mode: 'add',
+            autorename: true,
+            mute: false
+        });
+
+        require('fs').unlinkSync(file.path);  // Clean up the uploaded file
+
+        const pdfUrl = `https://www.dropbox.com/s/${response.result.path_lower}?dl=1`;  // Ensure this is the correct way to form the URL
+
+        // Add additional logic here to save the book details to your database if necessary
+        res.send('File uploaded successfully!');
+    } catch (error) {
+        console.error('Failed to upload file:', error);
+        res.status(500).send('Failed to upload file.');
+    }
+});
+
+
+
   
 
 app.listen(3001, () => {
