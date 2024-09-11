@@ -5,7 +5,7 @@ const bookSchema = new mongoose.Schema({
     description: { type: String },
     pdfUrl: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'users' } // Reference to the User
+    users: { type: mongoose.Schema.Types.ObjectId, ref: 'users' } // Reference to the User
 });
 
 

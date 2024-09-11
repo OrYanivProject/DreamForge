@@ -11,7 +11,12 @@ const Bookshelf = () => {
             fetch(`http://localhost:3001/users/${userId}/books`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error fetching books: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.message) {
                     console.error('Error fetching books:', data.message);
@@ -26,6 +31,7 @@ const Bookshelf = () => {
             console.error('Token or userId missing');
         }
     }, []);
+    
     
     
 
