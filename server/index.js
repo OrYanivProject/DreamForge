@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -83,25 +84,7 @@ app.post('/logout', (req, res) => {
     res.json({ message: "Logged out successfully" });
 });
 
-// /// Protected route: Add a book to a user's bookshelf
-// app.post('/users/:userId/books', async (req, res) => {
-//     if (req.user.id !== req.params.userId) {
-//         return res.status(403).json({ message: "Unauthorized access" });
-//     }
-//     try {
-//         const { title, description, pdfUrl } = req.body;
-//         const book = new Book({ title, description, pdfUrl });
-//         await book.save();
 
-//         const user = await UsersModel.findById(req.params.userId);
-//         user.books.push(book._id);  // Ensure you're pushing book ID not book object
-//         await user.save();
-
-//         res.status(201).json(book);
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// });
 
 // API to get all books for a user
 app.get('/users/:userId/books', verifyToken, async (req, res) => {
@@ -155,9 +138,6 @@ app.delete('/users/:userId/books/:bookId', async (req, res) => {
 
 
 
-// const express = require('express');
-// const Book = require('./models/Book'); 
-// const UsersModel = require('./models/users'); 
 
 app.post('/users/:userId/books', async (req, res) => {
     const { userId } = req.params; // Assuming you're receiving the user's ID in the URL
@@ -185,16 +165,86 @@ app.post('/users/:userId/books', async (req, res) => {
     }
 });
 
-//check
-// index.js
+
+
+// ######################################
+//    Dropbox and Uploading section
+// ######################################
+
+//session middleware to store token temporarily
+const session = require('express-session');
+
+app.use(session({
+    secret: 'your_session_secret',
+    resave: false,
+    saveUninitialized: true,
+}));
+
+//creating the OAuth2 authorization route
+const axios = require('axios');
+const client_id = 'ppo8obtemw37z2m';
+const client_secret = '7dskb64sprhz7fe';
+const redirect_uri = 'http://localhost:3001/auth/callback'; 
+
+app.get('/auth/dropbox', (req, res) => {
+    const dropboxAuthURL = `https://www.dropbox.com/oauth2/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&token_access_type=offline`;
+    res.redirect(dropboxAuthURL);
+});
+
+
+//Handle OAuth2 callback in the /auth/callback route
+app.get('/auth/callback', async (req, res) => {
+    const authorizationCode = req.query.code;
+
+    if (!authorizationCode) {
+        return res.status(400).send('Authorization code not found');
+    }
+
+    try {
+        const response = await axios.post('https://api.dropboxapi.com/oauth2/token', new URLSearchParams({
+            code: authorizationCode,
+            grant_type: 'authorization_code',
+            client_id: process.env.DROPBOX_CLIENT_ID,  // Use environment variables
+            client_secret: process.env.DROPBOX_CLIENT_SECRET,  // Use environment variables
+            redirect_uri: 'http://localhost:3001/auth/callback'
+        }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        const { access_token, refresh_token } = response.data;
+
+        console.log('Access Token:', access_token);
+        console.log('Refresh Token:', refresh_token);
+
+        res.send('Successfully authenticated! Check the server console for tokens.');
+    } catch (error) {
+        console.error('Error exchanging code for tokens:', error.response?.data || error.message);
+        res.status(500).send('Error during authentication');
+    }
+});
+
+
+
+
 const setupDropboxClient = require('./dropboxClient');
+const refreshAccessToken = require('./refreshDropboxToken'); // Import refresh token function
 
 app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
     const { userId } = req.params;
     const { title, description } = req.body;
-    const dbx = await setupDropboxClient();  // Ensure dbx is initialized here
 
     try {
+        // Check if the access token exists in the environment and refresh if necessary
+        let accessToken = process.env.DROPBOX_ACCESS_TOKEN;
+
+        // If access token doesn't exist or is about to expire, refresh it
+        if (!accessToken) {
+            accessToken = await refreshAccessToken();
+        }
+
+        // Initialize Dropbox client with the (potentially refreshed) access token
+        const dbx = await setupDropboxClient(accessToken);
+
         const { file } = req;
         if (!file) {
             return res.status(400).json({ message: "No file uploaded." });
@@ -235,28 +285,33 @@ app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
             }
         }
 
-        // Adjust the URL to be a direct download link
-        const pdfUrl = sharedLinkResponse.result.links[0].url.replace('?dl=0', '?dl=1');
+        // Check if the links array exists and has at least one item
+        const links = sharedLinkResponse?.result?.links;
+        if (Array.isArray(links) && links.length > 0) {
+            const pdfUrl = links[0].url.replace('?dl=0', '?dl=1');
 
-        // Create and save the book in MongoDB
-        const newBook = new Book({
-            title,
-            description,
-            pdfUrl,
-            user: userId
-        });
+            // Create and save the book in MongoDB
+            const newBook = new Book({
+                title,
+                description,
+                pdfUrl,
+                user: userId
+            });
 
-        await newBook.save();  // Save the new book to MongoDB
+            await newBook.save();  // Save the new book to MongoDB
 
-        // Link the new book to the user's list of books
-        await UsersModel.findByIdAndUpdate(userId, {
-            $push: { books: newBook._id }
-        });
+            // Link the new book to the user's list of books
+            await UsersModel.findByIdAndUpdate(userId, {
+                $push: { books: newBook._id }
+            });
 
-        res.status(201).json({ message: 'Book uploaded and added to your bookshelf', book: newBook });
+            res.status(201).json({ message: 'Book uploaded and added to your bookshelf', book: newBook });
+        } else {
+            throw new Error("No valid links found to generate the file URL.");
+        }
     } catch (error) {
         console.error('Failed to upload file:', error);
-        res.status(500).json({ message: 'Failed to upload file' });
+        res.status(500).json({ message: 'Failed to upload file. ' + error.message });
     }
 });
 
@@ -265,7 +320,10 @@ app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
 
 
 
-//end check
+
+
+
+
 
 // POST endpoint to upload a file and create a book entry
 // app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
