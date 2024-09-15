@@ -32,33 +32,35 @@ const Bookshelf = () => {
         }
     }, []);
     
-    
-    
-
     const handleAction = (action, book) => {
+        const token = localStorage.getItem('token');
+
         if (action === "Download" && book.pdfUrl) {
             // Adjust URL to ensure it forces download
             window.open(book.pdfUrl.replace('dl=0', 'dl=1'), '_blank');
         } else if (action === "View" && book.pdfUrl) {
-            // Open the PDF URL in a new tab without forcing download
+            // Open the file in a new tab for viewing
             window.open(book.pdfUrl.replace('dl=1', 'dl=0'), '_blank');
-        } else if (action === "Remove") {
-            const token = localStorage.getItem('token');
-            fetch(`http://localhost:3001/users/${localStorage.getItem('userId')}/books/${book._id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to delete book');
-                }
-                setBooks(prevBooks => prevBooks.filter(b => b._id !== book._id));
-            })
-            .catch(error => console.error('Error removing book:', error));
+        } 
+        else if (action === "Remove") {
+            // Show a confirmation dialog before removing the book
+            const isConfirmed = window.confirm("Are you sure you want to delete this book?");
+            
+            if (isConfirmed) {
+                fetch(`http://localhost:3001/users/${localStorage.getItem('userId')}/books/${book._id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete book');
+                    }
+                    setBooks(prevBooks => prevBooks.filter(b => b._id !== book._id));
+                })
+                .catch(error => console.error('Error removing book:', error));
+            }
         }
     };
-    
-    
 
     return (
         <div>
@@ -72,7 +74,7 @@ const Bookshelf = () => {
                                 <span className="book-title">{book.title}</span>
                                 <div className="actions">
                                     <button onClick={() => handleAction("Download", book)}>Download</button>
-                                    <button onClick={() => handleAction("View", book._id)}>View</button>
+                                    <button onClick={() => handleAction("View", book)}>View</button> {/* Fix: Pass `book` instead of `book._id` */}
                                     <button onClick={() => handleAction("Remove", book)}>Remove</button>
                                 </div>
                             </div>
@@ -84,7 +86,6 @@ const Bookshelf = () => {
             </div>
         </div>
     );
-    
 }
 
 export default Bookshelf;
