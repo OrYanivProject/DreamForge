@@ -6,7 +6,6 @@ import './styles.css';  // Ensure this CSS path is correct
 const Welcome = () => {
   return (
     <div>
-      <Header />
       <div className="welcome-page">
         <div className="content">
           <h1 className="title">DreamForge</h1>

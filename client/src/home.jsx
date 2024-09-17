@@ -12,7 +12,6 @@ function Home() {
 
     return (
         <div>
-            <Header />
         <div className="container home-container">
             <div className="form-container">
                 <h2 className="title">Write your idea, and in one click, your project book is ready.</h2>

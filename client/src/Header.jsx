@@ -1,23 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
 
-function Header() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+function Header({ isLoggedIn, setIsLoggedIn }) { // Accept props
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const token = localStorage.getItem('token'); // Check if token exists
-        if (token) {
-            setIsLoggedIn(true);
-        }
-    }, []);
-
     const handleLogout = () => {
-        localStorage.removeItem('token'); // Remove token on logout
-        setIsLoggedIn(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('userId'); // Remove userId too
+        setIsLoggedIn(false); // Update state
         axios.post('http://localhost:3001/logout') // Optional server-side handling
             .then(() => {
                 navigate('/login');
@@ -28,13 +20,16 @@ function Header() {
     return (
         <div className="navbar">
             <div className='nav-li'>
-                <Link to="/about-us" className="nav-link">DreamForge</Link>
-                <Link to="/our-work" className="nav-link">Our Work</Link>
+                <Link to="/" className="nav-link">
+                    <img src="\src\images\Icon.png" alt="Logo" className="logo" />
+                    DreamForge
+                </Link>
+                <Link to="/about" className="nav-link">About Us</Link>
             </div>
             <div className='nav-li'>
                 {isLoggedIn ? (
                     <>
-                        <Link to="/bookshelf" className="nav-link">My Projects</Link>
+                        <Link to="/bookshelf" className="nav-link">Bookshelf</Link>
                         <button className="nav-link button" onClick={handleLogout}>Log Out</button>
                     </>
                 ) : (

@@ -53,6 +53,12 @@
   background-color: #f0f0f0;
 }
 
+.logo {
+  height: 30px; /* Adjust the height as needed */
+  margin-right: 10px; /* Add space between the logo and the text */
+  vertical-align: middle; /* Aligns the image with the text */
+}
+
 .content {
   text-align: center;
   padding: 20px;

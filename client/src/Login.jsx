@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
-import Header from './Header';
 
-function Login() {
+function Login({ setIsLoggedIn }) { // Accept setIsLoggedIn as a prop
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
@@ -17,6 +16,8 @@ function Login() {
                     // Store the token in localStorage
                     localStorage.setItem('token', result.data.token);
                     localStorage.setItem('userId', result.data.userId);
+                    // Update logged-in state
+                    setIsLoggedIn(true); // Call the prop function
                     // Redirect the user after successful login
                     navigate('/home');
                 } else {
@@ -31,31 +32,30 @@ function Login() {
 
     return (
         <div>
-        <Header />
-        <div className="login-container">
-            <div className="form-container">
-                <h2 className="title">Login to DreamForge</h2>
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Email"
-                        className="input-field"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        className="input-field"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button type="submit" className="button">Login</button>
-                </form>
-                <Link to="/forgot-password" className="forgot-link">Forgot Username or Password?</Link>
-                <Link to="/register" className="link">Create a new account.</Link>
+            <div className="login-container">
+                <div className="form-container">
+                    <h2 className="title">Login to DreamForge</h2>
+                    <form onSubmit={handleSubmit}>
+                        <input
+                            type="text"
+                            placeholder="Email"
+                            className="input-field"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            className="input-field"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                        <button type="submit" className="button">Login</button>
+                    </form>
+                    <Link to="/forgot-password" className="forgot-link">Forgot Username or Password?</Link>
+                    <Link to="/register" className="link">Create a new account.</Link>
+                </div>
             </div>
-        </div>
         </div>
     );
 }

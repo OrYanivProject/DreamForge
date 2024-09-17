@@ -66,7 +66,6 @@ function Signup() {
     return (
         <div>
         <div>
-            <Header />
         <div className="container">
             <div className="form-container">
                 <h2 className="title">Create Account</h2>

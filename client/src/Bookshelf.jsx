@@ -31,38 +31,46 @@ const Bookshelf = () => {
             console.error('Token or userId missing');
         }
     }, []);
-    
-    
-    
 
     const handleAction = (action, book) => {
         if (action === "Download" && book.pdfUrl) {
-            // Adjust URL to ensure it forces download
-            window.open(book.pdfUrl.replace('dl=0', 'dl=1'), '_blank');
+            fetch(book.pdfUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = book.title || 'download.pdf'; // Set filename for download
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url); // Clean up
+                })
+                .catch(error => console.error('Error downloading file:', error));
         } else if (action === "View" && book.pdfUrl) {
-            // Open the PDF URL in a new tab without forcing download
-            window.open(book.pdfUrl.replace('dl=1', 'dl=0'), '_blank');
+            window.open(book.pdfUrl, '_blank');
         } else if (action === "Remove") {
-            const token = localStorage.getItem('token');
-            fetch(`http://localhost:3001/users/${localStorage.getItem('userId')}/books/${book._id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to delete book');
-                }
-                setBooks(prevBooks => prevBooks.filter(b => b._id !== book._id));
-            })
-            .catch(error => console.error('Error removing book:', error));
+            if (window.confirm('Are you sure you want to permanently remove this book?')) {
+                const token = localStorage.getItem('token');
+                fetch(`http://localhost:3001/users/${localStorage.getItem('userId')}/books/${book._id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete book');
+                    }
+                    setBooks(prevBooks => prevBooks.filter(b => b._id !== book._id));
+                })
+                .catch(error => console.error('Error removing book:', error));
+            }
         }
     };
-    
     
 
     return (
         <div>
-            <Header />
+           
             <div className="bookshelf">
                 <h2>Your Bookshelf: All Your Ideas Stored in One Place Where You Can View, Download, or Remove Your Project Books.</h2>
                 <div className="books">
@@ -72,7 +80,7 @@ const Bookshelf = () => {
                                 <span className="book-title">{book.title}</span>
                                 <div className="actions">
                                     <button onClick={() => handleAction("Download", book)}>Download</button>
-                                    <button onClick={() => handleAction("View", book._id)}>View</button>
+                                    <button onClick={() => handleAction("View", book)}>View</button>
                                     <button onClick={() => handleAction("Remove", book)}>Remove</button>
                                 </div>
                             </div>
@@ -84,7 +92,6 @@ const Bookshelf = () => {
             </div>
         </div>
     );
-    
 }
 
 export default Bookshelf;
