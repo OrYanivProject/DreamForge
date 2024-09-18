@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
 
-function Header({ isLoggedIn, setIsLoggedIn }) { // Accept props
+function Header({ isLoggedIn, setIsLoggedIn }) {
     const navigate = useNavigate();
 
     const handleLogout = () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('userId'); // Remove userId too
-        setIsLoggedIn(false); // Update state
-        axios.post('http://localhost:3001/logout') // Optional server-side handling
+        localStorage.removeItem('userId');
+        setIsLoggedIn(false);
+        axios.post('http://localhost:3001/logout')
             .then(() => {
                 navigate('/login');
             })
@@ -43,4 +44,4 @@ function Header({ isLoggedIn, setIsLoggedIn }) { // Accept props
     );
 }
 
-export default Header;
+export default Header; // Ensure this line is present

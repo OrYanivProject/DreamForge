@@ -8,6 +8,8 @@ const Book = require('./models/Book');
 const multer = require('multer');
 const { bucket } = require('./firebaseAdmin'); // Import the bucket object
 const upload = multer({ storage: multer.memoryStorage() }); 
+const { bucket } = require('./firebaseAdmin'); // Import the bucket object
+const upload = multer({ storage: multer.memoryStorage() }); 
 
 const app = express();
 app.use(express.json());
@@ -39,15 +41,18 @@ app.post('/login', (req, res) => {
     const { email, password } = req.body;
     UsersModel.findOne({ email: email })
         .then(user => {
-            if (user && user.password === password) {  // Assume passwords are correctly managed
+            if (user && user.password === password) { 
+                user.isLoggedIn = true; // Update login status
+                user.save(); // Save the updated user
                 const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: '1h' });
-                res.json({ message: "Success", token, userId: user._id.toString() }); // Ensure userId is sent
+                res.json({ message: "Success", token, userId: user._id.toString() });
             } else {
                 res.status(401).json({ message: "No such username exists or password is incorrect" });
             }
         })
         .catch(err => res.status(500).json({ message: err.message }));
 });
+
 
 app.post('/register', (req, res) => {
     UsersModel.findOne({ $or: [{ email: req.body.email }, { name: req.body.name }] })
@@ -64,7 +69,8 @@ app.post('/register', (req, res) => {
                 name: req.body.name,
                 email: req.body.email,
                 password: req.body.password,
-                books: []  // Initialize the books array when creating a new user
+                books: [],  // Initialize the books array
+                isLoggedIn: false // Add this line
             });
 
             newUser.save()

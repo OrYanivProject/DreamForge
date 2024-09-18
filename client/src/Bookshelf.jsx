@@ -32,8 +32,22 @@ const Bookshelf = () => {
         }
     }, []);
 
+
     const handleAction = (action, book) => {
         if (action === "Download" && book.pdfUrl) {
+            fetch(book.pdfUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = book.title || 'download.pdf'; // Set filename for download
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url); // Clean up
+                })
+                .catch(error => console.error('Error downloading file:', error));
             fetch(book.pdfUrl)
                 .then(response => response.blob())
                 .then(blob => {

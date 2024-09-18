@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './Header';
 import Signup from './Signup';
@@ -9,24 +8,32 @@ import Welcome from './Welcome';
 import Bookshelf from './Bookshelf'; 
 import UploadForm from './components/UploadForm';
 import AboutUs from './AboutUs';
+import AboutUs from './AboutUs';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Manage logged-in state here
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  return (
-    <BrowserRouter>
-      <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} /> {/* Pass state and updater to Header */}
-      <Routes>
-        <Route path='/' element={<Welcome />}></Route>
-        <Route path='/register' element={<Signup />}></Route>
-        <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} />}></Route> {/* Pass setIsLoggedIn to Login */}
-        <Route path='/home' element={<Home />}></Route>
-        <Route path='/bookshelf' element={<Bookshelf />} />
-        <Route path='/upload' element={<UploadForm />} />
-        <Route path='/about' element={<AboutUs />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            setIsLoggedIn(true);
+        }
+    }, []);
+
+    return (
+        <BrowserRouter>
+            <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+            <Routes>
+                <Route path='/' element={<Welcome />}></Route>
+                <Route path='/register' element={<Signup />} />
+                <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+                <Route path='/home' element={<Home />} />
+                <Route path='/bookshelf' element={<Bookshelf />} />
+                <Route path='/upload' element={<UploadForm />} />
+                <Route path='/about' element={<AboutUs />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
 export default App;
