@@ -1,38 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { storage } from "../firebase"; // Adjust path if needed
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 function UploadForm() {
-    const [userId, setUserId] = useState(localStorage.getItem('userId')); // Retrieve userId stored in local storage
-    const token = localStorage.getItem('token'); // Retrieve the JWT token from local storage
+    const [userId, setUserId] = useState(localStorage.getItem('userId')); 
+    const token = localStorage.getItem('token');
 
     const handleSubmit = async (event) => {
         event.preventDefault();
         const formData = new FormData(event.target);
+        const file = formData.get('file');
 
-        // Convert the formData fields to single values, ensuring title and description are strings
-        const bookData = {
-            title: formData.get('title'),  // Convert title to string
-            description: formData.get('description'),  // Convert description to string
-            file: formData.get('file')  // File stays as is
-        };
+        if (!file) {
+            alert('No file selected.');
+            return;
+        }
 
-        const uploadData = new FormData();
-        uploadData.append('title', bookData.title);
-        uploadData.append('description', bookData.description);
-        uploadData.append('file', bookData.file);
+        const fileRef = ref(storage, `uploads/${file.name}`);
+        try {
+            // Upload the file
+            await uploadBytes(fileRef, file);
+            const fileURL = await getDownloadURL(fileRef);
 
-        const response = await fetch(`http://localhost:3001/users/${userId}/upload`, {
-            method: 'POST',
-            body: uploadData,
-            headers: {
-                'Authorization': `Bearer ${token}`  // Ensure the token is sent in the Authorization header
-            },
-        });
+            const response = await fetch(`http://localhost:3001/users/${userId}/books`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    title: formData.get('title'),
+                    description: formData.get('description'),
+                    pdfUrl: fileURL
+                })
+            });
 
-        if (response.ok) {
-            alert('File uploaded successfully');
-        } else {
-            const errorMessage = await response.text();
-            alert('Upload failed: ' + errorMessage);
+            if (response.ok) {
+                alert('File uploaded and book added successfully');
+            } else {
+                const errorMessage = await response.text();
+                alert('Upload failed: ' + errorMessage);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Upload failed: ' + error.message);
         }
     };
 

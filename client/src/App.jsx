@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from './Header';
 import Signup from './Signup';
@@ -8,22 +7,32 @@ import Home from './home';
 import Welcome from './Welcome';  
 import Bookshelf from './Bookshelf'; 
 import UploadForm from './components/UploadForm';
-
+import AboutUs from './AboutUs';
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path='/' element={<Welcome />}></Route>  // Set Welcome as the root path
-        <Route path='/register' element={<Signup />}></Route>
-        <Route path='/login' element={<Login />}></Route>
-        <Route path='/home' element={<Home />}></Route>
-        <Route path="/bookshelf" element={<Bookshelf />} />
-        <Route path="/upload" element={<UploadForm />} />
-        
-      </Routes>
-    </BrowserRouter>
-  );
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            setIsLoggedIn(true);
+        }
+    }, []);
+
+    return (
+        <BrowserRouter>
+            <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+            <Routes>
+                <Route path='/' element={<Welcome />}></Route>
+                <Route path='/register' element={<Signup />} />
+                <Route path='/login' element={<Login setIsLoggedIn={setIsLoggedIn} />} />
+                <Route path='/home' element={<Home />} />
+                <Route path='/bookshelf' element={<Bookshelf />} />
+                <Route path='/upload' element={<UploadForm />} />
+                <Route path='/about' element={<AboutUs />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
 export default App;
