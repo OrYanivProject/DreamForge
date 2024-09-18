@@ -8,7 +8,7 @@ import Welcome from './Welcome';
 import Bookshelf from './Bookshelf'; 
 import UploadForm from './components/UploadForm';
 import AboutUs from './AboutUs';
-import AboutUs from './AboutUs';
+
 
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);

@@ -8,8 +8,8 @@ const Book = require('./models/Book');
 const multer = require('multer');
 const { bucket } = require('./firebaseAdmin'); // Import the bucket object
 const upload = multer({ storage: multer.memoryStorage() }); 
-const { bucket } = require('./firebaseAdmin'); // Import the bucket object
-const upload = multer({ storage: multer.memoryStorage() }); 
+
+
 
 const app = express();
 app.use(express.json());
