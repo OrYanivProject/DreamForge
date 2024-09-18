@@ -1,6 +1,8 @@
 /* Global Styles */
 .container,
-.welcome-page {
+.welcome-page,
+.home-container,
+.sign-up-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -89,8 +91,10 @@
   font-size: 18px;
   color: #666;
 }
+
 /* Login Page Specific Styles */
-.login-container {
+.login-container,
+.sign-up-container {
   display: flex;
   flex-direction: column;
   align-items: center;

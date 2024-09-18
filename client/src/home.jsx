@@ -12,7 +12,7 @@ function Home() {
 
     return (
         <div>
-        <div className="container home-container">
+        <div className="home-container">
             <div className="form-container">
                 <h2 className="title">Write your idea, and in one click, your project book is ready.</h2>
                 <input
