@@ -9,9 +9,17 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "overrides": {
+    "markdown-spellcheck": {
+      "marked": "^4.0.10"
+    }
+  },
   "dependencies": {
+    "@pdftron/webviewer": "^10.12.0",
+    "@syncfusion/ej2-react-documenteditor": "^27.1.48",
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",
+    "marked": "^14.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.1"

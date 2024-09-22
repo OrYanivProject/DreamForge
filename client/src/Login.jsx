@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './styles.css';
-import Header from './Header';
-import logo from './assets/images/logo.webp'; // Ensure the path is correct
 
-function Login() {
+function Login({ setIsLoggedIn }) { 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
@@ -17,9 +15,10 @@ function Login() {
                 if (result.data.message === "Success") {
                     localStorage.setItem('token', result.data.token);
                     localStorage.setItem('userId', result.data.userId);
+                    setIsLoggedIn(true); 
                     navigate('/home');
                 } else {
-                    alert(result.data.message);
+                    alert(result.data.message); 
                 }
             })
             .catch(err => {
@@ -30,10 +29,9 @@ function Login() {
 
     return (
         <div>
-            <Header />
             <div className="login-container">
                 <div className="form-container">
-                    <h2 className="title">Welcome to DreamForge</h2>
+                    <h2 className="loginTitle">Login to DreamForge</h2>
                     <form onSubmit={handleSubmit}>
                         <input
                             type="text"
@@ -51,11 +49,7 @@ function Login() {
                         />
                         <button type="submit" className="button">Login</button>
                     </form>
-                    <Link to="/forgot-password" className="forgot-link">Forgot Username or Password?</Link>
-                    <Link to="/register" className="link">Create a new account.</Link>
-                </div>
-                <div className="logo-container">
-                    <img src={logo} alt="DreamForge Logo" className="logo" />
+                    <Link to="/register" className="link">Don't have an account yet? Create one here.</Link>
                 </div>
             </div>
         </div>

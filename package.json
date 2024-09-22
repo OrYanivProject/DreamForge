@@ -1,9 +1,20 @@
 {
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.651.1",
+    "@pdftron/webviewer": "^10.12.0",
+    "@syncfusion/ej2-base": "^27.1.48",
+    "@syncfusion/ej2-buttons": "^27.1.48",
+    "@syncfusion/ej2-react-documenteditor": "^27.1.48",
     "axios": "^1.7.7",
+    "docx": "^8.5.0",
     "dotenv": "^16.4.5",
     "express-session": "^1.18.0",
+    "firebase": "^10.13.1",
+    "firebase-admin": "^12.5.0",
+    "fs": "^0.0.1-security",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.8.0"
+    "marked": "^14.1.2",
+    "mongodb": "^6.8.0",
+    "openai": "^4.62.1"
   }
 }
