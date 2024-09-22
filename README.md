@@ -6,3 +6,7 @@
 ![image](https://github.com/user-attachments/assets/2143f9b2-737c-4bf2-97ba-45bbceeaf148)
 ![image](https://github.com/user-attachments/assets/8cdb3090-dfbc-417d-af93-f9131ed6d583)
 
+To start using DreamForge follow this steps:
+1. download the code
+2. cd server and Start the server with the command: "npm start"
+4. cd client and run: "npm run dev"
