@@ -6,27 +6,42 @@ const jwt = require('jsonwebtoken');
 const UsersModel = require('./models/users');
 const Book = require('./models/Book');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
-const dbx = require('./dropboxClient');
+const upload = multer({ storage: multer.memoryStorage() }); 
+const axios = require('axios'); 
+const { Document, Packer, Paragraph, HeadingLevel} = require('docx'); 
+const { bucket} = require('./firebaseConfig'); 
+const fs = require('fs'); 
+
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+app.use(cors({
+    origin: 'http://localhost:5173', 
+    methods: 'GET,POST,PUT,DELETE', 
+    credentials: true 
+  }));
 
 mongoose.connect("mongodb+srv://oryanivdb:OyYl9792@dreamforge.6leyx.mongodb.net/users");
 
-const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure secret
+const JWT_SECRET = 'your_jwt_secret_key';
+const OPENAI_API_KEY = 'sk-rpNr0zN4r2p4O9BkPyPS9xxoOqOI1o1NNCck_W695rT3BlbkFJ9OdNfcxA08MJD4-PYfsOXnTNPpQDuslKtjHi1JF3oA'; 
 
-// Middleware to verify token
+
+// verify token
 const verifyToken = (req, res, next) => {
     const bearerHeader = req.headers['authorization'];
     if (typeof bearerHeader !== 'undefined') {
         const bearerToken = bearerHeader.split(' ')[1];
         jwt.verify(bearerToken, JWT_SECRET, (err, decoded) => {
             if (err) {
+                console.log('JWT Verification Error:', err);
+                if (err.name === "TokenExpiredError") {
+                    return res.status(403).json({ message: 'Session expired', code: 'SESSION_EXPIRED' });
+                }
                 return res.status(403).json({ message: 'Unauthorized access' });
             }
-            req.user = decoded;  // The token is decoded successfully here
+            req.user = decoded;
             next();
         });
     } else {
@@ -35,23 +50,22 @@ const verifyToken = (req, res, next) => {
 };
 
 
-
-//####  User login/out and registretion ####
+//####  User login/out and registration ####
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     UsersModel.findOne({ email: email })
         .then(user => {
-            if (user && user.password === password) {  // Assume passwords are correctly managed
-                const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: '1h' });
-                res.json({ message: "Success", token, userId: user._id.toString() }); // Ensure userId is sent
+            if (user && user.password === password) { 
+                user.isLoggedIn = true; 
+                user.save(); 
+                const token = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: '24h' });
+                res.json({ message: "Success", token, userId: user._id.toString() });
             } else {
                 res.status(401).json({ message: "No such username exists or password is incorrect" });
             }
         })
         .catch(err => res.status(500).json({ message: err.message }));
 });
-
-
 
 
 app.post('/register', (req, res) => {
@@ -65,12 +79,12 @@ app.post('/register', (req, res) => {
                 }
             }
 
-            // Create user with an empty books array if no existing user was found
             const newUser = new UsersModel({
                 name: req.body.name,
                 email: req.body.email,
                 password: req.body.password,
-                books: []  // Initialize the books array when creating a new user
+                books: [],  // Init - must
+                isLoggedIn: false 
             });
 
             newUser.save()
@@ -80,30 +94,34 @@ app.post('/register', (req, res) => {
         .catch(err => res.status(500).json({ message: err.message }));
 });
 
-app.post('/logout', (req, res) => {
-    res.json({ message: "Logged out successfully" });
-});
+app.post('/logout', verifyToken, (req, res) => {
+    if (!req.user || !req.user.id) {
+        console.log('User ID not found in JWT payload:', req.user);  
+        return res.status(400).json({ message: 'No user ID found in token' });
+    }
 
+    UsersModel.findByIdAndUpdate(req.user.id, { $set: { isLoggedIn: false } }, { new: true })
+        .then(() => {
+            res.json({ message: "Logged out successfully" });
+        })
+        .catch(err => {
+            console.error('Error logging out:', err);
+            res.status(500).json({ message: 'Failed to log out' });
+        });
+});
 
 
 // API to get all books for a user
 app.get('/users/:userId/books', verifyToken, async (req, res) => {
-    console.log('Decoded user ID:', req.user.id);
-    console.log('URL user ID:', req.params.userId);
-
     if (String(req.user.id) !== String(req.params.userId)) {
         return res.status(403).json({ message: "Unauthorized access" });
     }
     try {
-        // Populate books from the 'Book' model
         const user = await UsersModel.findById(req.params.userId).populate('books');
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-
-        console.log('User found:', user);
-        console.log('Books:', user.books);  // This should now print the user's books
 
         res.status(200).json(user.books); // Send back the user's books array
     } catch (error) {
@@ -112,48 +130,37 @@ app.get('/users/:userId/books', verifyToken, async (req, res) => {
     }
 });
 
-
-
-
 // API to delete a book from a user's bookshelf
 app.delete('/users/:userId/books/:bookId', async (req, res) => {
     try {
-        // Directly delete the book and check if deletion was successful
         const deletedBook = await Book.findOneAndDelete({ _id: req.params.bookId });
         if (!deletedBook) {
             return res.status(404).json({ message: "Book not found" });
         }
 
-        // Update the user's document to pull the book from their books array
         await UsersModel.findByIdAndUpdate(req.params.userId, { $pull: { books: req.params.bookId } });
 
-        res.status(204).send();  // Send a success status without content
+        res.status(204).send();  // Send a success status 
     } catch (error) {
         console.error('Error removing book:', error);
         res.status(500).json({ message: 'Internal Server Error: ' + error.message });
     }
 });
 
-
-
-
-
-
 app.post('/users/:userId/books', async (req, res) => {
-    const { userId } = req.params; // Assuming you're receiving the user's ID in the URL
-    const { title, description, pdfUrl } = req.body; // Details about the book
+    const { userId } = req.params;
+    const { title, description, pdfUrl } = req.body;
 
     try {
         const newBook = new Book({
             title,
             description,
             pdfUrl,
-            user: userId  // Link the book to the user who uploaded it
+            user: userId  
         });
 
-        await newBook.save(); // Save the new book
+        await newBook.save(); 
 
-        // Link the new book to the user's list of books
         await UsersModel.findByIdAndUpdate(userId, {
             $push: { books: newBook._id }
         });
@@ -165,198 +172,234 @@ app.post('/users/:userId/books', async (req, res) => {
     }
 });
 
-
-
-// ######################################
-//    Dropbox and Uploading section
-// ######################################
-
-//session middleware to store token temporarily
-const session = require('express-session');
-
-app.use(session({
-    secret: 'your_session_secret',
-    resave: false,
-    saveUninitialized: true,
-}));
-
-//creating the OAuth2 authorization route
-const axios = require('axios');
-const client_id = 'ppo8obtemw37z2m';
-const client_secret = '7dskb64sprhz7fe';
-const redirect_uri = 'http://localhost:3001/auth/callback'; 
-
-app.get('/auth/dropbox', (req, res) => {
-    const dropboxAuthURL = `https://www.dropbox.com/oauth2/authorize?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=code&token_access_type=offline`;
-    res.redirect(dropboxAuthURL);
-});
-
-
-//Handle OAuth2 callback in the /auth/callback route
-app.get('/auth/callback', async (req, res) => {
-    const authorizationCode = req.query.code;
-
-    if (!authorizationCode) {
-        return res.status(400).send('Authorization code not found');
-    }
-
-    try {
-        const response = await axios.post('https://api.dropboxapi.com/oauth2/token', new URLSearchParams({
-            code: authorizationCode,
-            grant_type: 'authorization_code',
-            client_id: process.env.DROPBOX_CLIENT_ID,  // Use environment variables
-            client_secret: process.env.DROPBOX_CLIENT_SECRET,  // Use environment variables
-            redirect_uri: 'http://localhost:3001/auth/callback'
-        }), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-
-        const { access_token, refresh_token } = response.data;
-
-        console.log('Access Token:', access_token);
-        console.log('Refresh Token:', refresh_token);
-
-        res.send('Successfully authenticated! Check the server console for tokens.');
-    } catch (error) {
-        console.error('Error exchanging code for tokens:', error.response?.data || error.message);
-        res.status(500).send('Error during authentication');
-    }
-});
-
-
-
-
-const setupDropboxClient = require('./dropboxClient');
-const refreshAccessToken = require('./refreshDropboxToken'); // Import refresh token function
-
-app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
+app.post('/users/:userId/createBook', async (req, res) => {
     const { userId } = req.params;
-    const { title, description } = req.body;
+    const { prompt } = req.body;
+
+    console.log(`Received book creation request for user: ${userId}`);
+    console.log(`Sending improvement request to OpenAI with prompt: ${prompt}`);
 
     try {
-        // Check if the access token exists in the environment and refresh if necessary
-        let accessToken = process.env.DROPBOX_ACCESS_TOKEN;
+        const improvementPrompt = `Take this idea and improve it, give me a requirements document for it back. The idea: ${prompt}`;
+        let response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: improvementPrompt }],
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
 
-        // If access token doesn't exist or is about to expire, refresh it
-        if (!accessToken) {
-            accessToken = await refreshAccessToken();
+        const requirementsDocument = response.data.choices[0].message.content;
+        console.log('Received requirements document from OpenAI :/n' + requirementsDocument);
+
+        const getNamePrompt = `Take this Requirements Document: ${requirementsDocument} and create a sofhisticated project name. Return the name(NOTHING ELSE).`;
+        response = await axios.post(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                model: 'gpt-4o-mini',
+                messages: [{ role: 'user', content: getNamePrompt }],
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+        const projectName = response.data.choices[0].message.content;
+
+
+        
+        const book = new Document({
+            creator: 'Your Name or App Name',
+            title: 'Project Book',
+            description: 'Generated based on user\'s idea.',
+            sections: [],
+        });
+       
+        const chapterList = ['Introduction', 'Background and Related Work'/*, 'Expected Achievements', 'System Architecture',
+                              'Engineering Process', 'Product Requirements and Work Stages','Testing Plan'*/];
+        let chapterNumber = 0;
+
+        for (const chapter of chapterList) {
+            chapterNumber = chapterNumber+1;
+            console.log(`Creating content for chapter: ${chapter}`);
+           
+
+            const chapterPrompt = `Create the whole content for a ${chapter} (chapter number: ${chapterNumber})
+            in the project book using the requirements document:
+            '${requirementsDocument}', the structure should be as follows:
+            Begin each main chapter with a major number (e.g., 1, 2, 3) followed by the title, excluding the word 'Chapter'.
+            Within each main chapter, use ascending sub-numbers formatted as 'x.y' for subtitles, where 'x' is the chapter number and 'y' is the consecutive subtitle number.
+            For sub-subtitles, continue the numbering as 'x.y.z', ensuring all numbers are in ascending order and properly aligned under the correct section or subsection.
+            Ensure each main chapter starts with the next consecutive whole number, even if there are multiple sub-sections in the previous chapter.
+            The content should adhere to academic standards, with a formal tone and structured layout appropriate for an academic final project book.
+            Please use this structured approach to improve clarity and consistency throughout the document.`;
+            response = await axios.post(
+                'https://api.openai.com/v1/chat/completions',
+                {
+                    model: 'gpt-4o-mini',
+                    messages: [{ role: 'user', content: chapterPrompt }],
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            // Global variables to maintain state across chapters and sections
+            let chapterContent = response.data.choices[0].message.content;
+            console.log(`Content for ${chapter}: ${chapterContent}`);
+
+            // Splits and parses the document content appropriately
+            const lines = chapterContent.split('\n');
+
+            const paragraphs = [];
+
+            lines.forEach(line => {
+                line = line.trim();  // Trim whitespace for cleaner processing
+                if (line.startsWith('# ')) {  // Correctly handles main titles, removes any markdown syntax
+                    const formattedTitle = line.substring(2).replace(/\*\*/g, '');
+                    paragraphs.push(new Paragraph({
+                        text: formattedTitle,
+                        heading: HeadingLevel.HEADING_1,
+                        bold: true,
+                        font: { size: 32 },  // Font size for main title (16pt)
+                        color: "000000",  // Black color
+                    }));
+                } else if (line.startsWith('## ')) {  // Handles subtitles
+                    const subtitle = line.substring(3).replace(/\*\*/g, '');
+                    paragraphs.push(new Paragraph({
+                        text: subtitle,
+                        heading: HeadingLevel.HEADING_2,
+                        bold: true,
+                        font: { size: 28 },  // Font size for subtitle (14pt)
+                        color: "000000",  // Black color
+                    }));
+                } else if (line.startsWith('### ')) {  // Handles sub-subtitles
+                    const subSubtitle = line.substring(4).replace(/\*\*/g, '');
+                    paragraphs.push(new Paragraph({
+                        text: subSubtitle,
+                        heading: HeadingLevel.HEADING_3,
+                        bold: false,
+                        font: { size: 28 },  // Font size for subsubtitle (14pt)
+                        color: "000000",  // Black color
+                    }));
+                } else if (line.startsWith('#### ')) {  // Handles sub-subtitles
+                    const subSubtitle = line.substring(5).replace(/\*\*/g, '');
+                    paragraphs.push(new Paragraph({
+                        text: subSubtitle,
+                        heading: HeadingLevel.HEADING_4,
+                        bold: false,
+                        font: { size: 28 },  // Font size for subsubtitle (14pt)
+                        color: "000000",  // Black color
+                        
+                    }));
+                } else if (line.startsWith('##### ')) {  // Handles sub-subtitles
+                    const subSubtitle = line.substring(6).replace(/\*\*/g, '');
+                    paragraphs.push(new Paragraph({
+                        text: subSubtitle,
+                        heading: HeadingLevel.HEADING_4,
+                        bold: false,
+                        font: { size: 28 },  // Font size for subsubtitle (14pt)
+                        color: "000000",  // Black color
+                    }));
+                }else if (line.startsWith('- **')) {  
+                    let cleanLine = line.replace('- **', '');  //it adds ●	automaticly so dont need to add.
+                    cleanLine = cleanLine.replace('**:', ':');  // Clean up bold near colon
+                    cleanLine = cleanLine.replace(':**',':');
+                    paragraphs.push(new Paragraph({
+                        text: cleanLine,
+                        bullet: { level: 0 },  // Add bullets to list items
+                        font: { size: 24 },  // Font size for text (12pt)
+                        color: "000000",  // Black color
+                    }));
+                } else {  // Regular text
+                    paragraphs.push(new Paragraph({
+                        text: line.replace(/\*\*/g, ''),
+                        font: { size: 24 },  // Font size for text (12pt)
+                        color: "000000",  // Black color
+                    }));
+                }
+            });
+
+            // Add formatted paragraphs to the document
+            book.addSection({
+                properties: {},
+                children: paragraphs,
+            });
+
+
+
+
         }
 
-        // Initialize Dropbox client with the (potentially refreshed) access token
-        const dbx = await setupDropboxClient(accessToken);
+        // Generate the buffer
+        const buffer = await Packer.toBuffer(book);
+        console.log('Document buffer created successfully');
+        
+        const fileName = `uploads/project_book_${Date.now()}.docx`;
+        const file = bucket.file(fileName);
 
-        const { file } = req;
-        if (!file) {
-            return res.status(400).json({ message: "No file uploaded." });
-        }
+        // Upload the buffer to Firebase Storage
+        await file.save(buffer);
+        // Make the file public
+        await file.makePublic();
 
-        // Read file contents
-        const fileContents = require('fs').readFileSync(file.path);
+        const fileURL = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+        console.log('File uploaded successfully:', fileURL);
 
-        // Upload file to Dropbox
-        const uploadResponse = await dbx.filesUpload({
-            path: '/' + file.originalname,
-            contents: fileContents,
-            mode: 'add',
-            autorename: true,
-            mute: false
+        const newBook = new Book({
+            title: projectName,
+            description: "Generated based on user's idea.",
+            pdfUrl: fileURL,
+            user: userId
         });
 
-        // Clean up the uploaded file
-        require('fs').unlinkSync(file.path);
-
-        // Get the path of the uploaded file
-        const dropboxFilePath = uploadResponse.result.path_lower;
-
-        // Try creating a shared link for the file
-        let sharedLinkResponse;
-        try {
-            sharedLinkResponse = await dbx.sharingCreateSharedLinkWithSettings({
-                path: dropboxFilePath
-            });
-        } catch (error) {
-            if (error?.error?.error_summary.includes('shared_link_already_exists')) {
-                // If the link already exists, reuse it
-                sharedLinkResponse = await dbx.sharingListSharedLinks({
-                    path: dropboxFilePath
-                });
-            } else {
-                throw error;  // Re-throw the error if it's a different issue
-            }
-        }
-
-        // Check if the links array exists and has at least one item
-        const links = sharedLinkResponse?.result?.links;
-        if (Array.isArray(links) && links.length > 0) {
-            const pdfUrl = links[0].url.replace('?dl=0', '?dl=1');
-
-            // Create and save the book in MongoDB
-            const newBook = new Book({
-                title,
-                description,
-                pdfUrl,
-                user: userId
-            });
-
-            await newBook.save();  // Save the new book to MongoDB
-
-            // Link the new book to the user's list of books
-            await UsersModel.findByIdAndUpdate(userId, {
-                $push: { books: newBook._id }
-            });
-
-            res.status(201).json({ message: 'Book uploaded and added to your bookshelf', book: newBook });
-        } else {
-            throw new Error("No valid links found to generate the file URL.");
-        }
+        await newBook.save();
+        await UsersModel.findByIdAndUpdate(userId, { $push: { books: newBook._id } });
+        console.log('New book saved and added to user profile successfully');
+        res.status(201).json({ message: 'Book added successfully', fileURL: fileURL });
     } catch (error) {
-        console.error('Failed to upload file:', error);
-        res.status(500).json({ message: 'Failed to upload file. ' + error.message });
+        console.error("Error during book creation: ", error);
+        res.status(500).json({ message: "Error generating project book", error: error.message });
     }
+});
+  
+app.post('/users/:userId/upload', async (req, res) => {
+    const { bookId } = req.body.bookId; // Assuming bookId is passed in the request body
+    const buffer = Buffer.from(req.body.fileBuffer); // Convert incoming buffer to proper format
+    console.log('Received file buffer for upload');
+ 
+    const fileName = `uploads/project_book_${Date.now()}.docx`;
+    const file = bucket.file(fileName);
+    try
+    {  
+    await file.save(buffer);
+    await file.makePublic();
+    const fileURL = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    await Book.findByIdAndUpdate(bookId, { pdfUrl: fileURL });
+    res.status(200).json({ message: 'File uploaded and book updated successfully', fileURL });
+ 
+    } catch (error) {
+        console.error("Error during book update - could not save changes", error);
+        res.status(500).json({ message: "Error generating project book", error: error.message });
+    }
+   
 });
 
 
 
+app.use('/uploads', express.static(__dirname));
 
-
-
-
-
-
-
-
-// POST endpoint to upload a file and create a book entry
-// app.post('/users/:userId/upload', upload.single('file'), async (req, res) => {
-//     const { file } = req;
-//     if (!file) {
-//         return res.status(400).send('No file uploaded.');
-//     }
-
-//     try {
-//         const fileContents = require('fs').readFileSync(file.path);
-//         const response = await dbx.filesUpload({
-//             path: '/' + file.originalname,
-//             contents: fileContents,
-//             mode: 'add',
-//             autorename: true,
-//             mute: false
-//         });
-
-//         require('fs').unlinkSync(file.path);  // Clean up the uploaded file
-
-//         const pdfUrl = `https://www.dropbox.com/s/${response.result.path_lower}?dl=1`;  // Ensure this is the correct way to form the URL
-
-//         // Add additional logic here to save the book details to your database if necessary
-//         res.send('File uploaded successfully!');
-//     } catch (error) {
-//         console.error('Failed to upload file:', error);
-//         res.status(500).send('Failed to upload file.');
-//     }
-// });
-
-
-
-  
 
 app.listen(3001, () => {
     console.log("server is running on port 3001");
